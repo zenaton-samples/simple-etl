@@ -1,0 +1,8 @@
+{
+  "name": "SimpleEtl",
+  "version": "1.0.0",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "zenaton": "^0.7.1"
+  }
+}
