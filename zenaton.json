@@ -1,0 +1,11 @@
+{
+  "name": "A simple ETL",
+  "description": "A simple workflow to pull data from an API and do calculations",
+  "logo": "",
+  "workflowName": "SimpleEtl",
+  "connectors": ["google_sheets, sendgrid"],
+  "onlineEditor": {
+    "input": [],
+    "events": []
+  }
+}
