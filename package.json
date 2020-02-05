@@ -1,8 +1,15 @@
 {
-  "name": "SimpleEtl",
+  "name": "simple-etl",
   "version": "1.0.0",
+  "main": "boot.js",
+  "license": "MIT",
   "dependencies": {
-    "dotenv": "^8.2.0",
-    "zenaton": "^0.7.1"
+    "@sendgrid/mail": "^6.5.1",
+    "axios": "^0.19.2",
+    "google-spreadsheet": "^3.0.4",
+    "zenaton": "^0.8.0"
+  },
+  "scripts": {
+    "postinstall": "cp -n .env.sample $INIT_CWD/.env || :"
   }
 }

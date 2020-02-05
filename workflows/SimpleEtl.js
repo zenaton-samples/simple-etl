@@ -1,44 +1,41 @@
-const googleSheetConnectorId = "";
-const spreadsheetId = "";
-const sendgridConnectorId = "";
-const yourEmail = "";
-const emailFrom = "zenaton-tutorial@zenaton.com";
-
-module.exports.handle = function*() {
-  const http = this.connector("http");
-  const googleSheets = this.connector("google_sheets", googleSheetConnectorId);
-  const sendgrid = this.connector("sendgrid", sendgridConnectorId);
-
+module.exports.handle = function*(options) {
   /*
-    EXTRACT Phase
+    Extract phase: retrieve data from the source.
   */
 
-  // Get the list of Star wars films including the characters list as ids.
-  const films = (yield http.get("https://swapi.co/api/films/")).data.results;
+  // get the list of Star Wars movies including the characters list as ids.
+  const movies = yield this.run.task("GetMovies");
 
-  // Extract characters ids of all films, some can appear multiple times.
-  const characters = films.flatMap(x => x.characters);
+  this.log(`${movies.length} movies were retrieved from the api.`);
+
+  // extract characters ids of all movies. some characters can appear multiple times.
+  const characters = movies.flatMap(x => x.characters);
+
+  this.log(`${characters.length} characters are referenced in these movies.`);
 
   /*
-    TRANSFORM Phase
+    Transform phase: use the extracted data to find most famous characters.
   */
 
-  // Count the number of films per characters ids.
+  // count in how many movies does a character appear in.
   const nbMoviesByCharacter = characters.reduce(
     (acc, c) => ({ ...acc, [c]: 1 + (acc[c] || 0) }),
     {}
   );
 
-  // Filter the characters ids to keep only those that appears in at least that 4 movies.
-  const famousIds = Object.keys(nbMoviesByCharacter)
+  // filter the characters ids to keep only those that appears in at least that 4 movies.
+  const famousCharactersIds = Object.keys(nbMoviesByCharacter)
     .map(uri => ({ uri, nb: nbMoviesByCharacter[uri] }))
-    .filter(x => x.nb >= 4);
+    .filter(x => x.nb >= 4)
+  ;
 
-  // Get details on those most famous characters.
+  this.log(`${famousCharactersIds.length} characters appear in at least 4 movies.`);
+
+  // get details on those most famous characters.
   let famousCharacters = [];
-  for (const c of famousIds) {
-    // Get the details about a given character from the API
-    const characterData = (yield http.get(c.uri)).data;
+  for (const c of famousCharactersIds) {
+    // get the details about a given character from the API.
+    const characterData = yield this.run.task("GetCharacterData", c.uri);
     famousCharacters.push({
       birth_year: characterData.birth_year,
       name: characterData.name,
@@ -47,52 +44,18 @@ module.exports.handle = function*() {
     });
   }
 
-  /*
-    LOAD phase
-  */
-
-  // Save da to GoogleSheet
+  // prepare data in a convenient format for GoogleSheet + email.
   const headers = ["Birth year", "Name", "Height", "Movies"];
   const cells = famousCharacters.map(x => Object.values(x));
 
+  this.log("Cells that are going to be written to GoogleSheet: ", cells);
+
+  /*
+    Load phase: write data to a GoogleSheet and send it
+  */
   // send results to google sheets
-  yield* sendToGoogleSheet(googleSheets, headers, cells);
+  // yield this.run.task("SendToGoogleSheet", headers, cells);
 
   // send results by email using sendgrid
-  yield* sendByEmail(sendgrid, emailFrom, yourEmail, headers, cells);
-};
-
-// Send to Google Sheet Task
-const sendToGoogleSheet = function*(googleSheets, headers, cells) {
-  /*
-  googleSheets.post(`/${spreadsheetId}/values:batchUpdate`, {
-    body: {
-      valueInputOption: "USER_ENTERED",
-      data: [{
-          range: "Sheet1!A1:D40",
-          majorDimension: "ROWS",
-          values: [headers].concat(cells)
-      }]
-    }
-  });
-  */
-};
-
-// Send By Email Task
-const sendByEmail = function*(sendGrid, from, to, headers, cells) {
-  /*
-  const payload = {
-    body: {
-      personalizations: [{ to: [{ email: to }] }],
-      content: [{
-          type: "text/plain",
-          value: "Here is your result: \n" + JSON.stringify([headers].concat(cells), null ,2)
-      }],
-      subject: "SW results",
-      from: { email:  from}
-    }
-  };
-
-  sendGrid.post("/mail/send", payload);
-  */
+  yield this.run.task("SendByEmail", options.emailReportTo, headers, cells);
 };

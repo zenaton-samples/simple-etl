@@ -1,7 +1,10 @@
 // load dependencies
-const { workflow } = require('zenaton');
+const { workflow, task } = require('zenaton');
 
-// load definitions
-const workflowDefinition = require("./workflows/SimpleEtl");
+// define tasks
+task("GetMovies", require("./tasks/GetMovies"));
+task("GetCharacterData", require("./tasks/GetCharacterData"));
+task("SendByEmail", require("./tasks/SendByEmail"));
 
-workflow("SimpleEtl", workflowDefinition);
+// define workflows
+workflow("SimpleETL", require("./workflows/SimpleEtl"));
